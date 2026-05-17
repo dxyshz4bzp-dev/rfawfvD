@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz geograficzny</title>
+
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+<style>
+body{margin:0;font-family:Arial,sans-serif;background:#f5f5f5;}
+h2{margin:0;padding:15px;background:#222;color:white;text-align:center;}
+#controls{background:white;padding:15px;text-align:center;}
+#question{font-size:24px;font-weight:bold;margin-bottom:10px;}
+#score{font-size:20px;margin-bottom:10px;}
+#attempts{font-size:18px;margin-bottom:10px;}
+#message{height:40px;font-size:20px;font-weight:bold;margin-bottom:10px;}
+#map{width:100%;height:75vh;}
+#restartBtn{
+padding:10px 20px;font-size:18px;border:none;border-radius:8px;
+background:#222;color:white;cursor:pointer;display:none;
+}
+</style>
+</head>
+
+<body>
+
+<h2>Quiz geograficzny</h2>
+
+<div id="controls">
+<div id="question">Ładowanie...</div>
+<div id="score">Punkty: 0</div>
+<div id="attempts">Pozostałe próby: 3</div>
+<div id="message"></div>
+<button id="restartBtn">Rozpocznij ponownie</button>
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+
+/* ===================================================== */
+/* OBIEKTY - PEŁNA LISTA */
+/* ===================================================== */
+
+const objects = [
+
+/* ================= EUROPA ================= */
+{name:"Wyspa Owcze",type:"wyspa",coords:[-6.9,62.0]},
+{name:"Wyspa Szetlandy",type:"wyspa",coords:[-1.3,60.3]},
+{name:"Wyspa Orkady",type:"wyspa",coords:[-3.0,59.0]},
+{name:"Wyspa Hebrydy",type:"wyspa",coords:[-6.8,57.5]},
+{name:"Wyspa Ibiza",type:"wyspa",coords:[1.4,39.0]},
+{name:"Wyspa Majorka",type:"wyspa",coords:[3.0,39.7]},
+{name:"Wyspa Minorka",type:"wyspa",coords:[4.1,39.9]},
+{name:"Wyspa Korsyka",type:"wyspa",coords:[9.0,42.2]},
+{name:"Wyspa Sardynia",type:"wyspa",coords:[9.0,40.1]},
+{name:"Wyspa Sycylia",type:"wyspa",coords:[14.0,37.5]},
+{name:"Wyspa Kreta",type:"wyspa",coords:[24.9,35.2]},
+{name:"Wyspa Malta",type:"wyspa",coords:[14.4,35.9]},
+
+{name:"Morze Białe",type:"morze",coords:[40.0,65.0]},
+{name:"Morze Barentsa",type:"morze",coords:[40.0,74.0]},
+{name:"Morze Norweskie",type:"morze",coords:[2.0,69.0]},
+{name:"Morze Północne",type:"morze",coords:[3.0,56.0]},
+{name:"Morze Śródziemne",type:"morze",coords:[15.0,35.0]},
+{name:"Morze Tyrreńskie",type:"morze",coords:[12.0,40.0]},
+{name:"Morze Liguryjskie",type:"morze",coords:[9.0,43.0]},
+{name:"Morze Adriatyckie",type:"morze",coords:[16.0,43.0]},
+{name:"Morze Jońskie",type:"morze",coords:[19.0,37.5]},
+{name:"Morze Egejskie",type:"morze",coords:[25.0,38.0]},
+{name:"Morze Czarne",type:"morze",coords:[35.0,44.0]},
+{name:"Morze Azowskie",type:"morze",coords:[37.5,46.0]},
+{name:"Morze Marmara",type:"morze",coords:[27.5,40.8]},
+{name:"Morze Kaspijskie",type:"morze",coords:[51.0,41.5]},
+
+{name:"Zatoka Biskajska",type:"zatoka",coords:[-5.0,45.5]},
+
+{name:"Cieśnina Bosfor",type:"cieśnina",coords:[29.1,41.1]},
+{name:"Cieśnina Dardanele",type:"cieśnina",coords:[26.4,40.2]},
+{name:"Cieśnina Gibraltarska",type:"cieśnina",coords:[-5.6,35.9]},
+{name:"Cieśnina Skagerrak",type:"cieśnina",coords:[9.0,58.5]},
+{name:"Cieśnina Kattegat",type:"cieśnina",coords:[11.5,57.5]},
+
+{name:"Rzeka Loara",type:"rzeka",coords:[1.5,47.5]},
+{name:"Rzeka Ren",type:"rzeka",coords:[7.5,50.0]},
+{name:"Rzeka Dunaj",type:"rzeka",coords:[19.0,47.0]},
+{name:"Rzeka Dniepr",type:"rzeka",coords:[32.0,49.0]},
+{name:"Rzeka Wołga",type:"rzeka",coords:[45.0,49.0]},
+
+{name:"Jezioro Ładoga",type:"jezioro",coords:[31.5,61.0]},
+{name:"Jezioro Onega",type:"jezioro",coords:[36.0,61.8]},
+{name:"Jezioro Wener",type:"jezioro",coords:[13.0,58.8]},
+
+/* ================= AFRYKA ================= */
+{name:"Wyspa Madagaskar",type:"wyspa",coords:[47.0,-20.0]},
+{name:"Wyspa Zielonego Przylądka",type:"wyspa",coords:[-24.0,16.0]},
+{name:"Wyspa Kanaryjskie",type:"wyspa",coords:[-15.5,28.5]},
+{name:"Wyspa Św. Tomasza i Książęca",type:"wyspa",coords:[6.7,0.3]},
+{name:"Wyspa Komory",type:"wyspa",coords:[44.5,-12.2]},
+{name:"Wyspa Zanzibar",type:"wyspa",coords:[39.2,-6.2]},
+
+{name:"Zatoka Adeńska",type:"zatoka",coords:[48.0,13.0]},
+{name:"Zatoka Gwinejska",type:"zatoka",coords:[2.0,0.0]},
+
+{name:"Kanał Mozambicki",type:"morze",coords:[42.0,-18.0]},
+{name:"Morze Czerwone",type:"morze",coords:[38.0,20.0]},
+
+{name:"Cieśnina Bab al-Mandab",type:"cieśnina",coords:[43.3,12.6]},
+
+{name:"Jezioro Wiktorii",type:"jezioro",coords:[33.0,-1.0]},
+{name:"Jezioro Niasa",type:"jezioro",coords:[35.5,-12.0]},
+{name:"Jezioro Tanganika",type:"jezioro",coords:[29.5,-6.0]},
+{name:"Jezioro Nasera",type:"jezioro",coords:[31.5,22.5]},
+
+{name:"Rzeka Nil",type:"rzeka",coords:[31.0,15.0]},
+{name:"Rzeka Kongo",type:"rzeka",coords:[20.0,-2.0]},
+{name:"Rzeka Niger",type:"rzeka",coords:[5.0,16.0]},
+{name:"Rzeka Zambezi",type:"rzeka",coords:[28.0,-16.0]},
+
+/* ================= AZJA ================= */
+{name:"Wyspa Sachalin",type:"wyspa",coords:[143.0,50.5]},
+{name:"Wyspa Honsiu",type:"wyspa",coords:[138.0,37.0]},
+{name:"Wyspa Tajwan",type:"wyspa",coords:[121.0,23.7]},
+{name:"Wyspa Borneo",type:"wyspa",coords:[114.0,1.0]},
+{name:"Wyspa Sumatra",type:"wyspa",coords:[102.0,-1.0]},
+{name:"Wyspa Jawa",type:"wyspa",coords:[110.0,-7.0]},
+{name:"Wyspa Cejlon",type:"wyspa",coords:[80.7,7.5]},
+
+{name:"Morze Karskie",type:"morze",coords:[70.0,74.0]},
+{name:"Morze Czukockie",type:"morze",coords:[-170.0,69.0]},
+{name:"Morze Beringa",type:"morze",coords:[-178.0,58.0]},
+{name:"Morze Ochockie",type:"morze",coords:[148.0,53.0]},
+{name:"Morze Japońskie",type:"morze",coords:[136.0,40.0]},
+{name:"Morze Żółte",type:"morze",coords:[123.0,35.0]},
+{name:"Morze Wschodniochińskie",type:"morze",coords:[125.0,28.0]},
+{name:"Morze Południowochińskie",type:"morze",coords:[114.0,12.0]},
+{name:"Morze Andamańskie",type:"morze",coords:[96.0,10.0]},
+{name:"Morze Celebes",type:"morze",coords:[122.0,3.0]},
+{name:"Morze Arabskie",type:"morze",coords:[65.0,15.0]},
+
+{name:"Zatoka Bengalska",type:"zatoka",coords:[88.0,15.0]},
+{name:"Zatoka Perska",type:"zatoka",coords:[52.0,26.0]},
+
+{name:"Cieśnina Beringa",type:"cieśnina",coords:[-169.0,66.0]},
+{name:"Cieśnina Malakka",type:"cieśnina",coords:[101.0,3.0]},
+
+{name:"Rzeka Eufrat",type:"rzeka",coords:[42.0,35.0]},
+{name:"Rzeka Tygrys",type:"rzeka",coords:[44.0,35.0]},
+{name:"Rzeka Amu-daria",type:"rzeka",coords:[62.0,42.0]},
+{name:"Rzeka Syr-daria",type:"rzeka",coords:[67.0,44.0]},
+{name:"Rzeka Indus",type:"rzeka",coords:[70.0,28.0]},
+{name:"Rzeka Ganges",type:"rzeka",coords:[88.0,25.0]},
+{name:"Rzeka Mekong",type:"rzeka",coords:[105.0,15.0]},
+{name:"Rzeka Jangcy",type:"rzeka",coords:[112.0,31.0]},
+{name:"Rzeka Huang He",type:"rzeka",coords:[110.0,36.0]},
+{name:"Rzeka Ob",type:"rzeka",coords:[73.0,61.0]},
+{name:"Rzeka Jenisej",type:"rzeka",coords:[92.0,61.0]},
+{name:"Rzeka Lena",type:"rzeka",coords:[125.0,63.0]},
+
+{name:"Jezioro Bajkał",type:"jezioro",coords:[108.0,53.5]},
+{name:"Jezioro Bałchasz",type:"jezioro",coords:[74.0,46.0]},
+{name:"Jezioro Aralskie",type:"jezioro",coords:[60.0,45.0]},
+{name:"Morze Martwe",type:"jezioro",coords:[35.5,31.5]},
+
+/* ================= AMERYKA PŁN ================= */
+{name:"Wyspa Nowa Funlandia",type:"wyspa",coords:[-56.0,49.0]},
+{name:"Wyspa Bahamy",type:"wyspa",coords:[-77.4,24.7]},
+{name:"Wyspa Kuba",type:"wyspa",coords:[-79.0,21.5]},
+{name:"Wyspa Haiti",type:"wyspa",coords:[-72.3,19.0]},
+{name:"Wyspa Jamajka",type:"wyspa",coords:[-77.3,18.1]},
+
+{name:"Morze Beauforta",type:"morze",coords:[-145.0,72.0]},
+{name:"Morze Baffina",type:"morze",coords:[-65.0,72.0]},
+{name:"Morze Sargassowe",type:"morze",coords:[-60.0,30.0]},
+
+{name:"Zatoka Meksykańska",type:"zatoka",coords:[-90.0,25.0]},
+{name:"Zatoka Kalifornijska",type:"zatoka",coords:[-110.0,26.0]},
+{name:"Zatoka Hudsona",type:"zatoka",coords:[-86.0,60.0]},
+
+{name:"Cieśnina Jukatańska",type:"cieśnina",coords:[-84.0,21.0]},
+{name:"Cieśnina Florydzka",type:"cieśnina",coords:[-80.0,25.0]},
+
+{name:"Rzeka MacKenzie",type:"rzeka",coords:[-120.0,65.0]},
+{name:"Rzeka Jukon",type:"rzeka",coords:[-135.0,62.0]},
+{name:"Rzeka Missisipi",type:"rzeka",coords:[-90.0,35.0]},
+{name:"Rzeka Św. Wawrzyńca",type:"rzeka",coords:[-70.0,47.0]},
+
+{name:"Jezioro Wielkie Niedźwiedzie",type:"jezioro",coords:[-121.0,66.0]},
+{name:"Jezioro Wielkie Niewolnicze",type:"jezioro",coords:[-117.0,62.0]},
+{name:"Jezioro Górne",type:"jezioro",coords:[-88.0,47.7]},
+{name:"Jezioro Michigan",type:"jezioro",coords:[-87.0,44.0]},
+{name:"Jezioro Huron",type:"jezioro",coords:[-83.0,45.0]},
+{name:"Jezioro Erie",type:"jezioro",coords:[-81.0,42.0]},
+{name:"Jezioro Ontario",type:"jezioro",coords:[-78.0,44.0]},
+
+/* ================= AMERYKA PŁD ================= */
+{name:"Wyspa Małe Antyle",type:"wyspa",coords:[-61.0,15.0]},
+{name:"Wyspa Falklandy",type:"wyspa",coords:[-59.0,-51.0]},
+{name:"Wyspa Ziemia Ognista",type:"wyspa",coords:[-70.0,-54.0]},
+
+{name:"Morze Karaibskie",type:"morze",coords:[-75.0,15.0]},
+
+{name:"Cieśnina Magellana",type:"cieśnina",coords:[-70.0,-52.0]},
+
+{name:"Rzeka Amazonka",type:"rzeka",coords:[-60.0,-3.0]},
+{name:"Rzeka Orinoko",type:"rzeka",coords:[-65.0,6.0]},
+{name:"Rzeka Paragwaj",type:"rzeka",coords:[-58.0,-23.0]},
+
+{name:"Jezioro Maracaibo",type:"jezioro",coords:[-71.0,10.0]},
+{name:"Jezioro Titicaca",type:"jezioro",coords:[-69.0,-15.0]},
+
+/* ================= AUSTRALIA + OCEANIA ================= */
+{name:"Wyspa Tasmania",type:"wyspa",coords:[147.0,-42.0]},
+{name:"Wyspa Nowa Gwinea",type:"wyspa",coords:[147.0,-6.0]},
+
+{name:"Morze Timor",type:"morze",coords:[125.0,-9.0]},
+{name:"Morze Arafura",type:"morze",coords:[135.0,-10.0]},
+{name:"Morze Koralowe",type:"morze",coords:[155.0,-18.0]},
+{name:"Morze Tasmana",type:"morze",coords:[160.0,-40.0]},
+{name:"Morze Fidżi",type:"morze",coords:[178.0,-18.0]},
+
+{name:"Zatoka Karpentaria",type:"zatoka",coords:[139.0,-15.0]},
+{name:"Wielka Australijska",type:"zatoka",coords:[130.0,-33.0]},
+{name:"Zatoka Rekinia",type:"zatoka",coords:[113.0,-25.0]},
+{name:"Zatoka Geografa",type:"zatoka",coords:[114.9,-33.6]},
+
+{name:"Cieśnina Torresa",type:"cieśnina",coords:[142.0,-10.0]},
+{name:"Cieśnina Bassa",type:"cieśnina",coords:[145.0,-39.0]},
+
+{name:"Rzeka Murray",type:"rzeka",coords:[141.0,-34.0]},
+{name:"Rzeka Darling",type:"rzeka",coords:[146.0,-30.0]},
+
+{name:"Jezioro Eyre",type:"jezioro",coords:[137.0,-29.0]}
+
+];
+
+/* ================= RESZTA KODU ================= */
+
+let shuffledObjects=[...objects].sort(()=>Math.random()-0.5);
+
+const typeColors={
+wyspa:"orange",
+morze:"blue",
+rzeka:"cyan",
+jezioro:"purple",
+zatoka:"yellow",
+cieśnina:"pink"
+};
+
+const map=L.map('map').setView([20,0],2);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+maxZoom:19
+}).addTo(map);
+
+const questionDisplay=document.getElementById("question");
+const scoreDisplay=document.getElementById("score");
+const attemptsDisplay=document.getElementById("attempts");
+const messageDisplay=document.getElementById("message");
+const restartBtn=document.getElementById("restartBtn");
+
+let currentIndex=0;
+let score=0;
+let attempts=3;
+
+function nextQuestion(){
+attempts=3;
+attemptsDisplay.textContent="Pozostałe próby: 3";
+
+currentIndex++;
+
+if(currentIndex>=shuffledObjects.length){
+const percent=((score/shuffledObjects.length)*100).toFixed(1);
+questionDisplay.innerHTML=`Koniec! Wynik: ${score.toFixed(2)} / ${shuffledObjects.length} (${percent}%)`;
+restartBtn.style.display="inline-block";
+return;
+}
+
+questionDisplay.textContent=
+`Znajdź na mapie: ${shuffledObjects[currentIndex].name}`;
+}
+
+/* MARKERY */
+
+objects.forEach(obj=>{
+obj.solved=false;
+
+const color=typeColors[obj.type]||"gray";
+
+obj.marker=L.circleMarker([obj.coords[1],obj.coords[0]],{
+radius:8,color,fillColor:color,fillOpacity:0.8
+}).addTo(map);
+
+obj.marker.on("click",()=>{
+
+if(obj.solved)return;
+
+const current=shuffledObjects[currentIndex];
+
+if(obj===current){
+
+score+=attempts===3?1:attempts===2?0.5:0.25;
+
+scoreDisplay.textContent=`Punkty: ${score.toFixed(2)}`;
+messageDisplay.innerHTML="✅ Dobrze!";
+obj.marker.setStyle({color:"green",fillColor:"green"});
+obj.solved=true;
+
+setTimeout(nextQuestion,800);
+
+}else{
+
+attempts--;
+attemptsDisplay.textContent=`Pozostałe próby: ${attempts}`;
+messageDisplay.innerHTML=`❌ To: <b>${obj.name}</b>`;
+
+if(attempts<=0){
+messageDisplay.innerHTML="❌ Brak prób!";
+current.marker.setStyle({color:"red",fillColor:"red"});
+current.solved=true;
+setTimeout(nextQuestion,1200);
+}
+}
+
+});
+});
+
+restartBtn.addEventListener("click",()=>{
+score=0;
+currentIndex=0;
+attempts=3;
+
+shuffledObjects=[...objects].sort(()=>Math.random()-0.5);
+
+scoreDisplay.textContent="Punkty: 0";
+attemptsDisplay.textContent="Pozostałe próby: 3";
+messageDisplay.innerHTML="";
+restartBtn.style.display="none";
+
+objects.forEach(o=>{
+o.solved=false;
+const c=typeColors[o.type]||"gray";
+o.marker.setStyle({color:c,fillColor:c});
+});
+
+questionDisplay.textContent=
+`Znajdź na mapie: ${shuffledObjects[0].name}`;
+});
+
+questionDisplay.textContent=
+`Znajdź na mapie: ${shuffledObjects[0].name}`;
+
+</script>
+
+</body>
+</html>
